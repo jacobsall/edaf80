@@ -26,14 +26,27 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// milliseconds, the following would have been used:
 	// auto const elapsed_time_ms = std::chrono::duration<float, std::milli>(elapsed_time).count();
 
-	_body.spin.rotation_angle = -glm::half_pi<float>() / 2.0f;
+	_body.spin.rotation_angle += _body.spin.speed * elapsed_time_s;
+	_body.orbit.rotation_angle += _body.orbit.speed * elapsed_time_s;
 
-	glm::mat4 world = parent_transform;
+	glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), _body.scale);
+	glm::mat4 R1s = glm::rotate(glm::mat4(1.0f), _body.spin.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 R2s = glm::rotate(glm::mat4(1.0f), _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
+	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(_body.orbit.radius,0.0f,0.0f));
+
+	glm::mat4 R1o = glm::rotate(glm::mat4(1.0f), _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 R2o = glm::rotate(glm::mat4(1.0f), _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
+
+	glm::mat4 world = parent_transform * R1o * translationMatrix * R2o * scaleMatrix * R2s * R1s;
 
 	if (show_basis)
 	{
 		bonobo::renderBasis(1.0f, 2.0f, view_projection, world);
 	}
+
+	glm::vec3 ringScaleVec = glm::vec3(1.0f, _ring.scale);
+	glm::mat4 ringRotationMatrix = glm::rotate(glm::mat4(1.0f), -glm::half_pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f));
+	glm::mat4 ringScaleMatrix = glm::scale(glm::mat4(1.0f), ringScaleVec);
 
 	// Note: The second argument of `node::render()` is supposed to be the
 	// parent transform of the node, not the whole world matrix, as the
@@ -42,8 +55,9 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// of the node is just the identity matrix and we can forward the whole
 	// world matrix.
 	_body.node.render(view_projection, world);
+	_ring.node.render(view_projection, parent_transform * R1o * translationMatrix * R2o * ringScaleMatrix * R2s *  ringRotationMatrix);
 
-	return parent_transform;
+	return parent_transform * R1o * translationMatrix * R2o * R2s;
 }
 
 void CelestialBody::add_child(CelestialBody* child)
