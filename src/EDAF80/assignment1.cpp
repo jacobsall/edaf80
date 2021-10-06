@@ -309,13 +309,17 @@ int main()
 
 		//glm::mat4 earthParent = earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
 		//moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), earthParent, show_basis);
+		glm::mat4 camtrans;
 		while (!unprocessed.empty()) {
 			CelestialBodyRef current = unprocessed.top();
 			unprocessed.pop();
 
 			glm::mat4 transform = current.body->render(animation_delta_time_us, camera.GetWorldToClipMatrix(), current.parent_transform, show_basis);
 
-			std::vector<CelestialBody*> children = current.body->get_children();
+			//if (current.body == &earth) {
+				//camtrans = transform;
+			//}
+			std::vector<CelestialBody*> const&children = current.body->get_children();
 			for (int i = 0; i < children.size(); i++) {
 				CelestialBodyRef ref;
 				ref.body = children[i];
@@ -323,6 +327,8 @@ int main()
 				unprocessed.push(ref);
 			}
 		}
+
+		//camera.mWorld.SetTranslate(glm::vec3(0.0f, 4.0f, 20.0f));
 
 		//
 		// Add controls to the scene.

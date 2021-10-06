@@ -35,9 +35,10 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(_body.orbit.radius,0.0f,0.0f));
 
 	glm::mat4 R1o = glm::rotate(glm::mat4(1.0f), _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 nR1o = glm::rotate(glm::mat4(1.0f), -_body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 R2o = glm::rotate(glm::mat4(1.0f), _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
 
-	glm::mat4 world = parent_transform * R1o * translationMatrix * R2o * scaleMatrix * R2s * R1s;
+	glm::mat4 world = parent_transform * R1o * translationMatrix * nR1o * R2o * scaleMatrix * R2s * R1s;
 
 	if (show_basis)
 	{

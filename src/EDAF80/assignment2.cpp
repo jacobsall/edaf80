@@ -43,7 +43,7 @@ void
 edaf80::Assignment2::run()
 {
 	// Load the sphere geometry
-	auto const shape = parametric_shapes::createCircleRing(2.0f, 0.75f, 40u, 4u);
+	auto const shape = parametric_shapes::createSphere(0.15f, 10u, 10u);//createCircleRing(2.0f, 0.75f, 40u, 4u);
 	if (shape.vao == 0u)
 		return;
 
@@ -168,6 +168,10 @@ edaf80::Assignment2::run()
 	float basis_thickness_scale = 1.0f;
 	float basis_length_scale = 1.0f;
 
+	float path_pos = 0.0f;
+	float pos_velocity = 0.01f;
+	int count = 0;
+
 	changeCullMode(cull_mode);
 
 	while (!glfwWindowShouldClose(window)) {
@@ -212,17 +216,33 @@ edaf80::Assignment2::run()
 		if (interpolate) {
 			//! \todo Interpolate the movement of a shape between various
 			//!        control points.
+
+			int i = floor(path_pos);
+			float distance = path_pos - i;
+			glm::vec3 newPos;
+
 			if (use_linear) {
 				//! \todo Compute the interpolated position
 				//!       using the linear interpolation.
+				
+				 newPos = interpolation::evalLERP(control_point_locations[i % 9], control_point_locations[(i+1) % 9], distance);
+
+				
 			}
 			else {
 				//! \todo Compute the interpolated position
 				//!       using the Catmull-Rom interpolation;
 				//!       use the `catmull_rom_tension`
 				//!       variable as your tension argument.
+
+				newPos = interpolation::evalCatmullRom(control_point_locations[(i - 1) % 9], control_point_locations[i % 9],
+					control_point_locations[(i + 1) % 9], control_point_locations[(i + 2) % 9], catmull_rom_tension, distance);
 			}
+
+			circle_rings.get_transform().SetTranslate(newPos);
+			path_pos += pos_velocity;
 		}
+
 
 		circle_rings.render(mCamera.GetWorldToClipMatrix());
 		for (auto const& control_point : control_points) {
