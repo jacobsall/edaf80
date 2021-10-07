@@ -4,6 +4,9 @@
 
 namespace parametric_shapes
 {
+
+	bonobo::mesh_data createCross(float const width, float const height, float const lineWidth);
+
 	//! \brief Create a quad a given tesselation level and make it
 	//!        available to OpenGL.
 	//!

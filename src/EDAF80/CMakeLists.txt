@@ -2,16 +2,14 @@ add_library (interpolation STATIC)
 target_sources (
        interpolation
        PUBLIC [[interpolation.hpp]]
-       PRIVATE [[interpolation.cpp]]
-)
+       PRIVATE [[interpolation.cpp]])
 target_link_libraries (interpolation PRIVATE CG_Labs_options glm)
 
 add_library (parametric_shapes STATIC)
 target_sources (
        parametric_shapes
        PUBLIC [[parametric_shapes.hpp]]
-       PRIVATE [[parametric_shapes.cpp]]
-)
+       PRIVATE [[parametric_shapes.cpp]])
 target_link_libraries (parametric_shapes PRIVATE bonobo CG_Labs_options)
 
 
@@ -22,8 +20,7 @@ target_sources (
 	PRIVATE
 		[[assignment1.cpp]]
 		[[CelestialBody.cpp]]
-		[[CelestialBody.hpp]]
-)
+		[[CelestialBody.hpp]])
 target_link_libraries (
 	EDAF80_Assignment1
 	PRIVATE assignment_setup parametric_shapes
@@ -37,8 +34,7 @@ target_sources (
 	EDAF80_Assignment2
 	PRIVATE
 		[[assignment2.hpp]]
-		[[assignment2.cpp]]
-)
+		[[assignment2.cpp]])
 target_link_libraries (
 	EDAF80_Assignment2
 	PRIVATE assignment_setup interpolation parametric_shapes
@@ -52,8 +48,7 @@ target_sources (
 	EDAF80_Assignment3
 	PRIVATE
 		[[assignment3.hpp]]
-		[[assignment3.cpp]]
-)
+		[[assignment3.cpp]])
 target_link_libraries (
 	EDAF80_Assignment3
 	PRIVATE assignment_setup parametric_shapes
@@ -67,8 +62,7 @@ target_sources (
 	EDAF80_Assignment4
 	PRIVATE
 		[[assignment4.hpp]]
-		[[assignment4.cpp]]
-)
+		[[assignment4.cpp]])
 target_link_libraries (
 	EDAF80_Assignment4
 	PRIVATE assignment_setup parametric_shapes
@@ -83,8 +77,11 @@ target_sources (
 	PRIVATE
 		[[assignment5.hpp]]
 		[[assignment5.cpp]]
+		)
+target_link_libraries (
+	EDAF80_Assignment5
+	PRIVATE assignment_setup parametric_shapes
 )
-target_link_libraries (EDAF80_Assignment5 PRIVATE assignment_setup)
 copy_dlls (EDAF80_Assignment5 "${CMAKE_CURRENT_BINARY_DIR}")
 
 

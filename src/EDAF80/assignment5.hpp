@@ -34,5 +34,6 @@ namespace edaf80
 		InputHandler   inputHandler;
 		WindowManager& mWindowManager;
 		GLFWwindow*    window;
+		glm::vec3 getRandomPosition();
 	};
 }
