@@ -65,6 +65,58 @@ parametric_shapes::createCross(float const width, float const height, float cons
 }
 
 bonobo::mesh_data
+parametric_shapes::createLine(float const length,  float const lineWidth) {
+	auto const vertices = std::array<glm::vec3, 5>{
+		glm::vec3(length, 0.0f, 0.0f),
+			glm::vec3(0.0f, 0.0f, 0.0f)
+	};
+
+
+	auto const index_sets = std::array<glm::uvec2, 2>{
+		glm::uvec2(1u, 0u),
+	};
+
+	bonobo::mesh_data data;
+	data.drawing_mode = GL_LINES;
+	glLineWidth(lineWidth);
+	glGenVertexArrays(1, &data.vao);
+
+	glBindVertexArray(data.vao);
+
+	glGenBuffers(1, &data.bo);
+	glBindBuffer(GL_ARRAY_BUFFER, data.bo);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * vertices.size(),
+		vertices.data(),
+		GL_STATIC_DRAW);
+
+
+	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
+	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices),
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		0,
+		reinterpret_cast<GLvoid const*>(0x0));
+	glGenBuffers(1, &data.ibo);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glm::uvec2) * index_sets.size(),
+		index_sets.data(),
+		GL_STATIC_DRAW);
+
+	data.indices_nb = index_sets.size() * 3;
+
+	// All the data has been recorded, we can unbind them.
+	glBindVertexArray(0u);
+	glBindBuffer(GL_ARRAY_BUFFER, 0u);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0u);
+
+	return data;
+}
+
+bonobo::mesh_data
 parametric_shapes::createQuad(float const width, float const height,
                               unsigned int const horizontal_split_count,
                               unsigned int const vertical_split_count)

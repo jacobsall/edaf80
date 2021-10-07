@@ -1,3 +1,4 @@
+#define GLM_ENABLE_EXPERIMENTAL
 #include "assignment5.hpp"
 #include "parametric_shapes.hpp"
 
@@ -13,8 +14,10 @@
 #include <clocale>
 #include <stdexcept>
 #include <glm/gtc/type_ptr.hpp>
+#include "glm/ext.hpp" or "glm/gtx/string_cast.hpp"
 
-int mapSize = 100;
+int mapSize = 300;
+int numberOfAsterioids = 400;
 
 edaf80::Assignment5::Assignment5(WindowManager& windowManager) :
 	mCamera(0.5f * glm::half_pi<float>(),
@@ -43,7 +46,9 @@ glm::vec3 edaf80::Assignment5::getRandomPosition() {
 
 void
 edaf80::Assignment5::run()
-{	
+{
+
+	int score = 0;
 	// Set up the camera
 	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 6.0f));
 	mCamera.mMouseSensitivity = 0.003f;
@@ -95,10 +100,19 @@ edaf80::Assignment5::run()
 	if (phong_shader == 0u)
 		LogError("Failed to load phong shader");
 
+	GLuint default_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Default",
+		{ { ShaderType::vertex, "EDAF80/default.vert" },
+		  { ShaderType::fragment, "EDAF80/default.frag" } },
+		default_shader);
+	if (default_shader == 0u)
+		LogError("Failed to load default shader");
+
 	bool use_normal_mapping = true;
 	float ellapsed_time_s = 0.0f;
-	auto light_position = glm::vec3(-16.0f, 4.0f, 16.0f);
-	auto ambient = glm::vec3(0.1f, 0.1f, 0.1f);
+	float explosion_visible_time = -1.0f;
+	auto light_position = glm::vec3(268.0f, -91.0f, 88.0f);
+	auto ambient = glm::vec3(0.05f, 0.05f, 0.05f);
 	auto diffuse = glm::vec3(132.0f / 255.0f, 132.0f / 255.0f, 119.0f / 255.0f);
 	auto specular = glm::vec3(0.0f,0.0f,0.0f);
 	auto shininess = 1.0f;
@@ -112,6 +126,35 @@ edaf80::Assignment5::run()
 		glUniform1f(glGetUniformLocation(program, "shininess"), shininess);
 	};
 
+
+	auto ambient_explosion = glm::vec3(224.0f / 255.0f, 9.0f / 255.0f, 9.0f / 255.0f);
+	auto diffuse_explosion = glm::vec3(224.0f / 255.0f, 92.0f / 255.0f, 9.0f / 255.0f);
+	auto const explosion_set_uniforms = [&use_normal_mapping, &light_position, &camera_position, &ambient_explosion, &diffuse_explosion, &specular, &shininess](GLuint program) {
+		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), use_normal_mapping ? 1 : 0);
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
+		glUniform3fv(glGetUniformLocation(program, "ambient"), 1, glm::value_ptr(ambient_explosion));
+		glUniform3fv(glGetUniformLocation(program, "diffuse"), 1, glm::value_ptr(diffuse_explosion));
+		glUniform3fv(glGetUniformLocation(program, "specular"), 1, glm::value_ptr(specular));
+		glUniform1f(glGetUniformLocation(program, "shininess"), shininess);
+	};
+
+	auto ambient_pistol = glm::vec3(0.1f, 0.1f, 0.1f);
+	auto diffuse_pistol = glm::vec3(83.0f / 255.0f, 86.0f / 255.0f, 90.0f / 255.0f);
+	auto light_position_pistol = glm::vec3(mCamera.mWorld.GetTranslation() + mCamera.mWorld.GetFront() * 0.5f);
+
+	auto shininess_pistol = 1.0f;
+	auto pistol_use_normal_mapping = false;
+	auto const pistol_set_uniforms = [&pistol_use_normal_mapping, &light_position_pistol, &camera_position, &ambient_pistol, &diffuse_pistol, &specular, &shininess_pistol](GLuint program) {
+		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), pistol_use_normal_mapping ? 1 : 0);
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position_pistol));
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
+		glUniform3fv(glGetUniformLocation(program, "ambient"), 1, glm::value_ptr(ambient_pistol));
+		glUniform3fv(glGetUniformLocation(program, "diffuse"), 1, glm::value_ptr(diffuse_pistol));
+		glUniform3fv(glGetUniformLocation(program, "specular"), 1, glm::value_ptr(specular));
+		glUniform1f(glGetUniformLocation(program, "shininess"), shininess_pistol);
+	};
+
 	auto const set_uniforms = [&light_position, &camera_position, &ellapsed_time_s](GLuint program) {
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
 		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
@@ -123,20 +166,24 @@ edaf80::Assignment5::run()
 	// Todo: Load your geometry
 	//
 
+	
+
 	auto skybox_cube_map = bonobo::loadTextureCubeMap(
-		config::resources_path("cubemaps/NissiBeach2/posx.jpg"),
-		config::resources_path("cubemaps/NissiBeach2/negx.jpg"),
-		config::resources_path("cubemaps/NissiBeach2/posy.jpg"),
-		config::resources_path("cubemaps/NissiBeach2/negy.jpg"),
-		config::resources_path("cubemaps/NissiBeach2/posz.jpg"),
-		config::resources_path("cubemaps/NissiBeach2/negz.jpg"));
+		config::resources_path("cubemaps/space/posx.png"),
+		config::resources_path("cubemaps/space/negx.png"),
+		config::resources_path("cubemaps/space/posy.png"),
+		config::resources_path("cubemaps/space/negy.png"),
+		config::resources_path("cubemaps/space/posz.png"),
+		config::resources_path("cubemaps/space/negz.png"));
 
 	auto normal_map_id = bonobo::loadTexture2D(
 		config::resources_path("textures/asteroid_normal.jpg"));
 	auto diffuse_tex_id = bonobo::loadTexture2D(
 		config::resources_path("textures/asteroid.jpg"));
+	auto waves_tex_id = bonobo::loadTexture2D(
+		config::resources_path("textures/waves.png"));
 
-
+	
 
 	auto skybox_shape = parametric_shapes::createSphere(mapSize, 100u, 100u);
 	if (skybox_shape.vao == 0u) {
@@ -144,10 +191,36 @@ edaf80::Assignment5::run()
 		return;
 	}
 
+	auto pistol_shape = bonobo::loadObjects(config::resources_path("scenes/spaceshipturret.obj"));
+	if (pistol_shape.empty()) {
+		LogError("Failed to retrieve the mesh for the spaceshipturret");
+		return;
+	}
+	auto pistol_parts = std::vector<Node>(pistol_shape.size());
+	glm::vec3 pistol_offset = glm::vec3(0, -2.0f, 0.5f);
+	for (int i = 1; i < 2; i++) {
+		Node pistol_part;
+		pistol_part.set_geometry(pistol_shape[i]);
+		pistol_part.set_program(&phong_shader, pistol_set_uniforms);
+		pistol_part.get_transform().SetScale(0.01f);
+		pistol_parts[i] = pistol_part;
+	}
+	
+
+
 	Node skybox;
 	skybox.set_geometry(skybox_shape);
 	skybox.set_program(&skybox_shader, set_uniforms);
 	skybox.add_texture("my_cube_map", skybox_cube_map, GL_TEXTURE_CUBE_MAP);
+
+	Node explosion;
+	int explosionRadius = 10;
+	explosion.set_geometry(parametric_shapes::createSphere(explosionRadius, 30, 30));
+	explosion.get_transform().SetTranslate(glm::vec3(10000, 10000, 10000));
+	explosion.set_program(&phong_shader, explosion_set_uniforms);
+	//    explosion.add_texture("diffuse_texture", exploded_bump_map, GL_TEXTURE_2D);
+	explosion.add_texture("normal_map", waves_tex_id, GL_TEXTURE_2D);
+	//explosion.node.add_texture("diffuse_texture", waves_tex_id, GL_TEXTURE_2D);
 
 	
 
@@ -161,7 +234,7 @@ edaf80::Assignment5::run()
 		glm::vec3 rotationDirection;
 	};
 
-	auto asteroids = std::vector<Asteroid>(20);
+	auto asteroids = std::vector<Asteroid>(numberOfAsterioids);
 	Node cross;
 	cross.set_geometry(parametric_shapes::createCross(0.003f, 0.003f, 2.5f));
 	cross.set_program(&cross_shader, set_uniforms);
@@ -170,7 +243,7 @@ edaf80::Assignment5::run()
 	{
 		Asteroid asteroid;
 
-		auto size = (double)rand() / ((double)RAND_MAX + 1);
+		auto size = ((rand() % 10) + 1);
 		asteroid.radius = size;
 		asteroid.angle = 0.0f;
 		asteroid.rotationDirection = glm::normalize(getRandomPosition());
@@ -183,7 +256,7 @@ edaf80::Assignment5::run()
 		asteroid.node.get_transform().SetTranslate(getRandomPosition());
 		asteroid.v = glm::vec3(0.0f, 0.0f, 0.0f);
 		asteroid.trajetory = glm::normalize(getRandomPosition());
-		asteroid.speed = 2;
+		asteroid.speed = (rand() % 20) + 10;
 
 		asteroids[i] = asteroid;
 	}
@@ -255,13 +328,13 @@ edaf80::Assignment5::run()
 		if (inputHandler.GetKeycodeState(GLFW_KEY_D) & PRESSED)
 			strafe = 0.2;
 
-		float maxVelocity = 2;
+		float maxVelocity = 15;
 		if (glm::length(cameraVelocity) >= maxVelocity) {
 			move = 0;
 			strafe = 0;
 		}
 		cameraVelocity = cameraVelocity + mCamera.mWorld.GetFront() * move * deltaTime + mCamera.mWorld.GetRight() * strafe * deltaTime;
-		cameraVelocity = cameraVelocity + -cameraVelocity * 1.5f * deltaTime;
+		cameraVelocity = cameraVelocity + -cameraVelocity * 0.7f * deltaTime;
 		
 		if (inputHandler.GetKeycodeState(GLFW_KEY_SPACE) & JUST_RELEASED) {
 			for (int i = 0; i < asteroids.size(); i++)
@@ -271,24 +344,20 @@ edaf80::Assignment5::run()
 				glm::vec3 v = mCamera.mWorld.GetFront();
 				glm::vec3 u = ps - pv;
 				if (glm::length(u - v * glm::dot(u, v)) < asteroids[i].radius) {
+					explosion.get_transform().SetTranslate(asteroids[i].node.get_transform().GetTranslation());
+					explosion.get_transform().SetScale(0);
+					explosion_visible_time = ellapsed_time_s + 1;
 					asteroids[i].node.get_transform().SetTranslate(getRandomPosition());
+					
+					score++;
 				}
 			}
 			
 		}
-
-		/*if (glm::length(cameraVelocity) < 0.1f) {
-			cameraVelocity = glm::vec3(0, 0, 0);
-		}*/
-			
-
 		
 		mCamera.mWorld.Translate(cameraVelocity);
 
 
-
-
-		//mCamera.mWorld.LookAt(player.get_transform().GetTranslation());
 		mWindowManager.NewImGuiFrame();
 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -311,8 +380,29 @@ edaf80::Assignment5::run()
 				asteroids[i].angle = asteroids[i].angle + 1 * deltaTime;
 				asteroids[i].node.get_transform().SetRotate(asteroids[i].angle, asteroids[i].trajetory);
 
+				//Player collision
+				glm::vec3 p1 = asteroids[i].node.get_transform().GetTranslation();
+				glm::vec3 p2 = mCamera.mWorld.GetTranslation();
+				float r1 = asteroids[i].radius;
+				float r2 = 1;
 
-				//Astroid Collision
+				if (glm::length(p1 - p2) < r1 + r2) {
+					asteroids[i].node.get_transform().SetTranslate(getRandomPosition());
+					score -= 10;
+				}
+
+				//Explosion collision
+				if (ellapsed_time_s < explosion_visible_time) {
+					p2 = explosion.get_transform().GetTranslation();
+					r2 = explosion.get_transform().GetScale().x * explosionRadius;
+					if (glm::length(p1 - p2) < r1 + r2) { 
+						asteroids[i].node.get_transform().SetTranslate(getRandomPosition());
+						score++;
+					}
+				}
+				
+
+				//Asteroid Collision
 				for (int j = 0; j < asteroids.size(); j++) {
 					if (j == i) continue;
 
@@ -335,10 +425,29 @@ edaf80::Assignment5::run()
 			}
 
 			
-			skybox.render(mCamera.GetWorldToClipMatrix());
+
+			std::cout << glm::to_string(mCamera.mWorld.GetTranslation()) << std::endl;
+			
 			cross.get_transform().SetTranslate(mCamera.mWorld.GetTranslation() + mCamera.mWorld.GetFront() * 0.1f);
 			cross.get_transform().LookAt(mCamera.mWorld.GetTranslation());
 			cross.render(mCamera.GetWorldToClipMatrix());
+
+			for (int i = 0; i < pistol_parts.size(); i++)
+			{
+				pistol_parts[i].get_transform().LookTowards(mCamera.mWorld.GetFront());
+				pistol_parts[i].get_transform().SetTranslate(mCamera.mWorld.GetTranslation() + pistol_offset);
+				pistol_parts[i].render(mCamera.GetWorldToClipMatrix());
+			}
+			
+			
+
+			if (ellapsed_time_s < explosion_visible_time) {
+				explosion.get_transform().SetScale(explosion.get_transform().GetScale() + 3.0f * deltaTime);
+				explosion.render(mCamera.GetWorldToClipMatrix());
+			}
+
+			skybox.render(mCamera.GetWorldToClipMatrix());
+			
 		}
 
 
@@ -348,18 +457,10 @@ edaf80::Assignment5::run()
 		// Todo: If you want a custom ImGUI window, you can set it up
 		//       here
 		//
-		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
-		if (opened) {
-			ImGui::Checkbox("Show basis", &show_basis);
-			ImGui::SliderFloat("Basis thickness scale", &basis_thickness_scale, 0.0f, 100.0f);
-			ImGui::SliderFloat("Basis length scale", &basis_length_scale, 0.0f, 100.0f);
-		}
+		bool const opened = ImGui::Begin("Score", nullptr, ImGuiWindowFlags_None);
+		ImGui::Text("%i", score);
 		ImGui::End();
 
-		if (show_basis)
-			bonobo::renderBasis(basis_thickness_scale, basis_length_scale, mCamera.GetWorldToClipMatrix());
-		if (show_logs)
-			Log::View::Render();
 		mWindowManager.RenderImGuiFrame(show_gui);
 
 		glfwSwapBuffers(window);
