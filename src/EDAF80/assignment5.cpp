@@ -191,14 +191,15 @@ edaf80::Assignment5::run()
 		return;
 	}
 
-	auto pistol_shape = bonobo::loadObjects(config::resources_path("scenes/spaceshipturret.obj"));
+	auto pistol_shape = bonobo::loadObjects(config::resources_path("scenes/spaceshipturret_center.obj"));
 	if (pistol_shape.empty()) {
 		LogError("Failed to retrieve the mesh for the spaceshipturret");
 		return;
 	}
 	auto pistol_parts = std::vector<Node>(pistol_shape.size());
-	glm::vec3 pistol_offset = glm::vec3(0, -2.0f, 0.5f);
-	for (int i = 1; i < 2; i++) {
+	//glm::vec3 pistol_offset = glm::vec3(0, -2.0f, 0.5f);
+	glm::vec3 pistol_offset = glm::vec3(0, 0, 0);
+	for (int i = 0; i < pistol_shape.size(); i++) {
 		Node pistol_part;
 		pistol_part.set_geometry(pistol_shape[i]);
 		pistol_part.set_program(&phong_shader, pistol_set_uniforms);
@@ -357,6 +358,13 @@ edaf80::Assignment5::run()
 		
 		mCamera.mWorld.Translate(cameraVelocity);
 
+		//Player reaches skyboxw
+		if (glm::length(mCamera.mWorld.GetTranslation()) >= mapSize) {
+			mCamera.mWorld.Translate(-cameraVelocity * 8);
+			cameraVelocity = -cameraVelocity * 8;
+		}
+
+
 
 		mWindowManager.NewImGuiFrame();
 
@@ -390,7 +398,6 @@ edaf80::Assignment5::run()
 					asteroids[i].node.get_transform().SetTranslate(getRandomPosition());
 					score -= 10;
 				}
-
 				//Explosion collision
 				if (ellapsed_time_s < explosion_visible_time) {
 					p2 = explosion.get_transform().GetTranslation();
@@ -423,10 +430,6 @@ edaf80::Assignment5::run()
 
 				asteroids[i].node.render(mCamera.GetWorldToClipMatrix());
 			}
-
-			
-
-			std::cout << glm::to_string(mCamera.mWorld.GetTranslation()) << std::endl;
 			
 			cross.get_transform().SetTranslate(mCamera.mWorld.GetTranslation() + mCamera.mWorld.GetFront() * 0.1f);
 			cross.get_transform().LookAt(mCamera.mWorld.GetTranslation());
@@ -438,7 +441,6 @@ edaf80::Assignment5::run()
 				pistol_parts[i].get_transform().SetTranslate(mCamera.mWorld.GetTranslation() + pistol_offset);
 				pistol_parts[i].render(mCamera.GetWorldToClipMatrix());
 			}
-			
 			
 
 			if (ellapsed_time_s < explosion_visible_time) {
